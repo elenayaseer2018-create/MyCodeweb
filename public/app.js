@@ -1,26 +1,289 @@
-const header=document.querySelector('.site-header');
-const updateHeader=()=>header.classList.toggle('scrolled',window.scrollY>15);
-updateHeader();window.addEventListener('scroll',updateHeader,{passive:true});
-const menu=document.querySelector('.menu-toggle'),mobile=document.querySelector('#mobile-nav');
-function closeMenu(){menu.setAttribute('aria-expanded','false');menu.setAttribute('aria-label','Open navigation');mobile.hidden=true;}
-menu.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Close navigation':'Open navigation');mobile.hidden=!open;});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!mobile.hidden){closeMenu();menu.focus();}});
-mobile.querySelectorAll('a').forEach(a=>a.addEventListener('click',closeMenu));
-window.matchMedia('(min-width: 801px)').addEventListener('change',e=>{if(e.matches)closeMenu();});
-const themeButton=document.querySelector('.theme-toggle');
-function themeLabel(){themeButton.setAttribute('aria-label',`Switch to ${document.documentElement.dataset.theme==='dark'?'light':'dark'} theme`);}
-themeLabel();themeButton.addEventListener('click',()=>{const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;try{localStorage.setItem('codecrab-theme',theme);}catch{}themeLabel();});
-if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches&&'IntersectionObserver'in window){const elements=document.querySelectorAll('.section-heading,.positioning-layout,.service-card,.principles article,.founder-layout,.process-list li');elements.forEach(e=>e.classList.add('reveal'));document.documentElement.classList.add('motion-ready');const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target);}}),{threshold:.07});elements.forEach(e=>observer.observe(e));}
-const form=document.querySelector('#project-form');
-if(form){
- const status=document.querySelector('#form-status'),submit=form.querySelector('[type=submit]');
- const service=new URLSearchParams(location.search).get('service');
- [...form.querySelectorAll('[name=services]')].find(e=>e.value===service)?.setAttribute('checked','');
- if(form.dataset.endpoint){submit.innerHTML='Send project brief <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 20 20" fill="none"><path d="M4 16 16 4M5 4h11v11" stroke="currentColor" stroke-width="1.4"/></svg></span>';document.querySelector('.contact-note').textContent='Your brief is sent securely to the connected inquiry service. We only ask for details relevant to your project.';document.querySelector('.form-privacy').textContent='Your details are shared with the studio’s connected inquiry service to respond to your request.';}
- function validate(){let valid=true,first=null;for(const name of ['name','email','website','message']){const field=form.elements[name],error=document.querySelector(`#${name}-error`);let message='';const v=field.value.trim();if(field.required&&!v)message='Please complete this field.';else if(name==='email'&&(!field.validity.valid||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)))message='Enter a valid email address.';else if(name==='website'&&v){try{const u=new URL(v);if(!['https:','http:'].includes(u.protocol))message='Use an http or https website address.';}catch{message='Enter a full address, starting with https://.';}}else if(name==='message'&&v.length<20)message='Please share at least 20 characters about your project.';error.textContent=message;field.setAttribute('aria-invalid',String(Boolean(message)));if(message){field.setAttribute('aria-describedby',`${name}-error`);valid=false;first??=field;}else field.removeAttribute('aria-describedby');}
- const selected=form.querySelectorAll('[name=services]:checked');document.querySelector('#services-error').textContent=selected.length?'':'Choose at least one project type.';const fs=form.querySelector('fieldset');if(!selected.length){fs.setAttribute('aria-describedby','services-error');valid=false;first??=form.querySelector('[name=services]');}else fs.removeAttribute('aria-describedby');if(first)first.focus();return valid;}
- function brief(){const d=new FormData(form);return `PROJECT INQUIRY — CODECRAB\n\nName: ${String(d.get('name')).trim()}\nEmail: ${String(d.get('email')).trim()}\nCompany: ${d.get('company')||'Not specified'}\nWebsite: ${d.get('website')||'Not specified'}\nServices: ${[...form.querySelectorAll('[name=services]:checked')].map(e=>e.nextElementSibling.textContent).join(', ')}\nBudget direction: ${d.get('budget')}\nTimeline: ${d.get('timeline')}\n\n${String(d.get('message')).trim()}`;}
- function emailHandoff(){status.replaceChildren();const p=document.createElement('p');p.textContent='Your brief is ready. Open it in your email app, then send it to info@codecrab.net. It has not been sent by this website.';const a=document.createElement('a');a.href=`mailto:info@codecrab.net?subject=${encodeURIComponent('Project inquiry — '+form.elements.name.value.trim())}&body=${encodeURIComponent(brief())}`;a.textContent='Open project email ↗';status.append(p,a);}
- form.addEventListener('submit',async e=>{e.preventDefault();status.replaceChildren();if(form.elements.fax.value)return;if(!validate())return;if(!form.dataset.endpoint){emailHandoff();return;}submit.disabled=true;submit.textContent='Sending…';try{const payload=Object.fromEntries(new FormData(form));payload.services=[...form.querySelectorAll('[name=services]:checked')].map(e=>e.value);const res=await fetch(form.dataset.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload)});if(!res.ok)throw Error('Submission failed');status.textContent='Your project brief has been submitted. Thank you for starting the conversation.';form.reset();}catch{status.textContent='We couldn’t submit your brief. Your details are still here. Please try again, copy your brief or email info@codecrab.net.';}finally{submit.disabled=false;submit.innerHTML='Send project brief <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 20 20" fill="none"><path d="M4 16 16 4M5 4h11v11" stroke="currentColor" stroke-width="1.4"/></svg></span>';}});
- form.querySelector('.copy-brief').addEventListener('click',async()=>{if(!validate())return;try{await navigator.clipboard.writeText(brief());status.textContent='Brief copied. Paste it into an email to info@codecrab.net.';}catch{status.replaceChildren();const area=document.createElement('textarea');area.readOnly=true;area.value=brief();area.setAttribute('aria-label','Project brief to copy');status.append('Copy the text below and email it to info@codecrab.net.',area);area.focus();area.select();}});
+const header = document.querySelector(".site-header");
+const updateHeader = () =>
+  header.classList.toggle("scrolled", window.scrollY > 15);
+updateHeader();
+window.addEventListener("scroll", updateHeader, { passive: true });
+const menu = document.querySelector(".menu-toggle"),
+  mobile = document.querySelector("#mobile-nav");
+function closeMenu() {
+  menu.setAttribute("aria-expanded", "false");
+  menu.setAttribute("aria-label", "Open navigation");
+  mobile.hidden = true;
+}
+menu.addEventListener("click", () => {
+  const open = menu.getAttribute("aria-expanded") !== "true";
+  menu.setAttribute("aria-expanded", String(open));
+  menu.setAttribute(
+    "aria-label",
+    open ? "Close navigation" : "Open navigation",
+  );
+  mobile.hidden = !open;
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !mobile.hidden) {
+    closeMenu();
+    menu.focus();
+  }
+});
+mobile
+  .querySelectorAll("a")
+  .forEach((a) => a.addEventListener("click", closeMenu));
+window.matchMedia("(min-width: 801px)").addEventListener("change", (e) => {
+  if (e.matches) closeMenu();
+});
+const themeButton = document.querySelector(".theme-toggle");
+function themeLabel() {
+  themeButton.setAttribute(
+    "aria-label",
+    `Switch to ${document.documentElement.dataset.theme === "dark" ? "light" : "dark"} theme`,
+  );
+}
+themeLabel();
+themeButton.addEventListener("click", () => {
+  const theme =
+    document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = theme;
+  try {
+    localStorage.setItem("codecrab-theme", theme);
+  } catch {}
+  themeLabel();
+});
+if (
+  !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
+  "IntersectionObserver" in window
+) {
+  const elements = document.querySelectorAll(
+    ".section-heading,.positioning-layout,.service-card,.principles article,.founder-layout,.process-list li",
+  );
+  elements.forEach((e) => e.classList.add("reveal"));
+  document.documentElement.classList.add("motion-ready");
+  const observer = new IntersectionObserver(
+    (entries) =>
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
+        }
+      }),
+    { threshold: 0.07 },
+  );
+  elements.forEach((e) => observer.observe(e));
+}
+const form = document.querySelector("#project-form");
+const digitalObject = document.querySelector(".digital-object");
+if (digitalObject) {
+  const approaches = {
+    design: [
+      "Shape the experience.",
+      "Thoughtful interfaces. A distinct identity.",
+      "01 / 03",
+    ],
+    build: [
+      "Engineer the foundations.",
+      "Careful code. Dependable platforms.",
+      "02 / 03",
+    ],
+    connect: [
+      "Connect what comes next.",
+      "Practical integrations. Useful intelligence.",
+      "03 / 03",
+    ],
+  };
+  digitalObject.querySelectorAll("button[data-approach]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const mode = button.dataset.approach;
+      digitalObject.dataset.approach = mode;
+      digitalObject
+        .querySelectorAll("button")
+        .forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+      const [title, description, index] = approaches[mode];
+      document.querySelector("#approach-title").textContent = title;
+      document.querySelector("#approach-description").textContent = description;
+      document.querySelector(".object-index").textContent = index;
+    }),
+  );
+  if (
+    matchMedia("(pointer:fine)").matches &&
+    !matchMedia("(prefers-reduced-motion:reduce)").matches
+  ) {
+    digitalObject.addEventListener("pointermove", (e) => {
+      const rect = digitalObject.getBoundingClientRect();
+      digitalObject.style.setProperty(
+        "--pointer-x",
+        `${((e.clientX - rect.left) / rect.width - 0.5) * 12}px`,
+      );
+      digitalObject.style.setProperty(
+        "--pointer-y",
+        `${((e.clientY - rect.top) / rect.height - 0.5) * 10}px`,
+      );
+    });
+    digitalObject.addEventListener("pointerleave", () => {
+      digitalObject.style.setProperty("--pointer-x", "0px");
+      digitalObject.style.setProperty("--pointer-y", "0px");
+    });
+  }
+}
+const filters = document.querySelectorAll("[data-filter]");
+filters.forEach((button) =>
+  button.addEventListener("click", () => {
+    const category = button.dataset.filter;
+    let count = 0;
+    filters.forEach((b) =>
+      b.setAttribute("aria-pressed", String(b === button)),
+    );
+    document
+      .querySelectorAll(".portfolio-grid .project-card")
+      .forEach((card) => {
+        card.hidden = category !== "All" && card.dataset.category !== category;
+        if (!card.hidden) count++;
+      });
+    document
+      .querySelector(".portfolio-grid")
+      .classList.toggle("filtered", category !== "All");
+    document.querySelector("#project-count").textContent =
+      `${count} ${count === 1 ? "PROJECT" : "PROJECTS"}`;
+    document.querySelector("#portfolio-empty").hidden = count !== 0;
+  }),
+);
+if (form) {
+  form.noValidate = true;
+  const status = document.querySelector("#form-status"),
+    submit = form.querySelector("[type=submit]");
+  const service = new URLSearchParams(location.search).get("service");
+  [...form.querySelectorAll("[name=services]")]
+    .find((e) => e.value === service)
+    ?.setAttribute("checked", "");
+  if (form.dataset.endpoint) {
+    submit.innerHTML =
+      'Send project brief <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 20 20" fill="none"><path d="M4 16 16 4M5 4h11v11" stroke="currentColor" stroke-width="1.4"/></svg></span>';
+    document.querySelector(".contact-note").textContent =
+      "Your brief is submitted securely through this website. Prefer email? You can also copy the brief and send it directly to info@codecrab.net.";
+    document.querySelector(".form-privacy").textContent =
+      "Your contact details and project brief are collected to respond to your inquiry. Please do not include sensitive information.";
+  }
+  function validate() {
+    let valid = true,
+      first = null;
+    for (const name of ["name", "email", "website", "message"]) {
+      const field = form.elements[name],
+        error = document.querySelector(`#${name}-error`);
+      let message = "";
+      const v = field.value.trim();
+      if (field.required && !v) message = "Please complete this field.";
+      else if (
+        name === "email" &&
+        (!field.validity.valid || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
+      )
+        message = "Enter a valid email address.";
+      else if (name === "website" && v) {
+        try {
+          const u = new URL(v);
+          if (!["https:", "http:"].includes(u.protocol))
+            message = "Use an http or https website address.";
+        } catch {
+          message = "Enter a full address, starting with https://.";
+        }
+      } else if (name === "message" && v.length < 20)
+        message = "Please share at least 20 characters about your project.";
+      error.textContent = message;
+      field.setAttribute("aria-invalid", String(Boolean(message)));
+      if (message) {
+        field.setAttribute("aria-describedby", `${name}-error`);
+        valid = false;
+        first ??= field;
+      } else field.removeAttribute("aria-describedby");
+    }
+    const selected = form.querySelectorAll("[name=services]:checked");
+    document.querySelector("#services-error").textContent = selected.length
+      ? ""
+      : "Choose at least one project type.";
+    const fs = form.querySelector("fieldset");
+    if (!selected.length) {
+      fs.setAttribute("aria-describedby", "services-error");
+      valid = false;
+      first ??= form.querySelector("[name=services]");
+    } else fs.removeAttribute("aria-describedby");
+    if (first) first.focus();
+    return valid;
+  }
+  function brief() {
+    const d = new FormData(form);
+    return `PROJECT INQUIRY — CODECRAB\n\nName: ${String(d.get("name")).trim()}\nEmail: ${String(d.get("email")).trim()}\nCompany: ${d.get("company") || "Not specified"}\nWebsite: ${d.get("website") || "Not specified"}\nServices: ${[...form.querySelectorAll("[name=services]:checked")].map((e) => e.nextElementSibling.textContent).join(", ")}\nBudget direction: ${d.get("budget")}\nTimeline: ${d.get("timeline")}\n\n${String(d.get("message")).trim()}`;
+  }
+  function emailHandoff() {
+    status.replaceChildren();
+    const p = document.createElement("p");
+    p.textContent =
+      "Your brief is ready. Open it in your email app, then send it to info@codecrab.net. It has not been sent by this website.";
+    const a = document.createElement("a");
+    a.href = `mailto:info@codecrab.net?subject=${encodeURIComponent("Project inquiry — " + form.elements.name.value.trim())}&body=${encodeURIComponent(brief())}`;
+    a.textContent = "Open project email ↗";
+    status.append(p, a);
+  }
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    status.replaceChildren();
+    if (form.elements.fax.value) return;
+    if (!validate()) return;
+    if (!form.dataset.endpoint) {
+      emailHandoff();
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = "Sending…";
+    try {
+      const payload = Object.fromEntries(new FormData(form));
+      payload.services = [
+        ...form.querySelectorAll("[name=services]:checked"),
+      ].map((e) => e.value);
+      const native = form.dataset.delivery === "netlify";
+      const body = native
+        ? new URLSearchParams({
+            ...payload,
+            services: payload.services.join(", "),
+          }).toString()
+        : JSON.stringify(payload);
+      const res = await fetch(form.dataset.endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": native
+            ? "application/x-www-form-urlencoded"
+            : "application/json",
+          Accept: native ? "text/html" : "application/json",
+        },
+        body,
+      });
+      if (!res.ok) throw Error("Submission failed");
+      status.textContent =
+        "Your project brief has been submitted. Thank you for starting the conversation.";
+      form.reset();
+    } catch {
+      status.textContent =
+        "We couldn’t submit your brief. Your details are still here. Please try again, copy your brief or email info@codecrab.net.";
+    } finally {
+      submit.disabled = false;
+      submit.innerHTML =
+        'Send project brief <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 20 20" fill="none"><path d="M4 16 16 4M5 4h11v11" stroke="currentColor" stroke-width="1.4"/></svg></span>';
+    }
+  });
+  form.querySelector(".copy-brief").addEventListener("click", async () => {
+    if (!validate()) return;
+    try {
+      await navigator.clipboard.writeText(brief());
+      status.textContent =
+        "Brief copied. Paste it into an email to info@codecrab.net.";
+    } catch {
+      status.replaceChildren();
+      const area = document.createElement("textarea");
+      area.readOnly = true;
+      area.value = brief();
+      area.setAttribute("aria-label", "Project brief to copy");
+      status.append(
+        "Copy the text below and email it to info@codecrab.net.",
+        area,
+      );
+      area.focus();
+      area.select();
+    }
+  });
 }

@@ -1,0 +1,9 @@
+# Verified URLs from the existing CodeCrab site. Keep their destinations relevant.
+/about-us/ /about/ 301
+/our-services/ /services/ 301
+/our-portfolio/ /portfolio/ 301
+/contact-us/ /contact/ 301
+/request-a-quote/ /contact/ 301
+/our-services/website-development/ /services/web-design-development/ 301
+/our-services/graphic-design/ /services/ui-ux-design/ 301
+/our-services/search-engine-optimization/ /services/seo-performance/ 301
