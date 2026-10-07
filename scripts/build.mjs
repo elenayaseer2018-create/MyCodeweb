@@ -1,0 +1,23 @@
+import {mkdir,writeFile,cp,rm} from 'node:fs/promises';
+import {header,footer,esc} from '../src/components.mjs';
+import {home,work,servicesPage,serviceDetail,about,contact,notFound} from '../src/pages.mjs';
+import {studio,services} from '../src/content.mjs';
+const root=new URL('../',import.meta.url);
+const out=new URL('dist/',root);
+await rm(out,{recursive:true,force:true});await mkdir(out,{recursive:true});
+await cp(new URL('public/',root),out,{recursive:true});
+await mkdir(new URL('assets/',out),{recursive:true});
+await cp(new URL('node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2',root),new URL('assets/manrope.woff2',out));
+await cp(new URL('node_modules/@fontsource-variable/manrope/LICENSE',root),new URL('assets/manrope-LICENSE.txt',out));
+const pages=[['/','CodeCrab — Digital products, web & practical AI', 'CodeCrab Technologies brings design, web development, e-commerce and practical AI integrations together for ambitious businesses.',home()],['/portfolio/','Selected Work — CodeCrab','Discuss relevant CodeCrab work and project examples for your next website, platform or commerce experience.',work()],['/services/','Digital Capabilities — CodeCrab','Web development, digital platforms, e-commerce, product design and AI automation from an independent technology studio.',servicesPage()],['/about/','The Studio — CodeCrab','Meet CodeCrab Technologies and founder Yasir Mahmood. A boutique studio connecting design, engineering and business thinking.',about()],['/contact/','Start a Project — CodeCrab','Tell CodeCrab about your next website, digital product or AI integration. Prepare a project brief or email info@codecrab.net.',contact()],...services.map(s=>['/services/'+s.slug+'/',s.name+' — CodeCrab',s.description,serviceDetail(s)]),['/404.html','Page Not Found — CodeCrab','Find your way back to CodeCrab.',notFound()]];
+for(const [path,title,description,body] of pages){
+ const schema=[{'@context':'https://schema.org','@type':'Organization',name:studio.name,url:studio.url,email:studio.email,founder:{'@type':'Person',name:studio.founder,jobTitle:'Founder / Senior Web Developer / Technology Consultant'}},{'@context':'https://schema.org','@type':'WebSite',name:studio.name,url:studio.url}];
+ const s=services.find(s=>path==='/services/'+s.slug+'/');if(s) schema.push({'@context':'https://schema.org','@type':'Service',name:s.name,description:s.description,provider:{'@type':'Organization',name:studio.name,url:studio.url}});
+ const html=`<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><title>${esc(title)}</title><meta name="description" content="${esc(description)}">${path==='/404.html'?'<meta name="robots" content="noindex">':`<link rel="canonical" href="${studio.url+path}">`}<meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}"><meta property="og:url" content="${studio.url+path}"><meta property="og:image" content="${studio.url}/social-card.png"><meta name="theme-color" content="#090d11"><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="preload" href="/assets/manrope.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><script src="/theme.js"></script><script src="/app.js" defer></script><script type="application/ld+json">${JSON.stringify(schema).replace(/</g,'\\u003c')}</script></head><body id="top">${header(path)}<main id="main">${body}</main>${footer()}</body></html>`;
+ const glyphs={'↗':'M4 16 16 4M5 4h11v11','↓':'M10 3v14m-5-5 5 5 5-5','↑':'M10 17V3m-5 5 5-5 5 5','✓':'m4 10 4 4 8-9','✳':'M10 2v16M2 10h16M4 4l12 12M4 16 16 4'};
+ const finalHtml=html.replace(/[↗↓↑✓✳]/g,g=>`<svg class="inline-arrow" aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="${glyphs[g]}" stroke="currentColor" stroke-width="1.4"/></svg>`);
+ const dest=path==='/404.html'?'404.html':path==='/'?'index.html':path.slice(1)+'index.html';await mkdir(new URL(dest.substring(0,dest.lastIndexOf('/')+1),out),{recursive:true});await writeFile(new URL(dest,out),finalHtml);
+}
+await writeFile(new URL('sitemap.xml',out),`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${pages.filter(p=>p[0]!=='/404.html').map(p=>`<url><loc>${studio.url+p[0]}</loc></url>`).join('')}</urlset>`);
+await writeFile(new URL('robots.txt',out),`User-agent: *\nAllow: /\nSitemap: ${studio.url}/sitemap.xml\n`);
+console.log(`Built ${pages.length} pages to dist/`);
